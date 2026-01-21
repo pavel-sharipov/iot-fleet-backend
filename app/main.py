@@ -1,24 +1,12 @@
-import os
-from pathlib import Path
+from fastapi import FastAPI
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
+from pathlib import Path
+
+from app.api.v1.router import api_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-app = FastAPI()
+app = FastAPI(title="IoT Fleet Backend")
 
-@app.get("/db-ping")
-def db_ping():
-    uri = os.getenv("MONGODB_URI")
-    if not uri:
-        raise HTTPException(status_code=500, detail="MONGODB_URI is not set")
-
-    try:
-        client = MongoClient(uri, server_api=ServerApi("1"))
-        client.admin.command("ping")
-        return {"mongodb": "ok"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+app.include_router(api_router, prefix="/api/v1")
