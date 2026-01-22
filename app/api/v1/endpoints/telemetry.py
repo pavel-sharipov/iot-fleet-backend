@@ -7,9 +7,13 @@ from bson import ObjectId
 from app.db.mongo import get_db
 from app.models.telemetry import TelemetryIn, TelemetryOut, TelemetryListOut
 
+from app.repositories.telemetry_repo import TelemetryRepo
+from app.services.telemetry_service import TelemetryService
+
 router = APIRouter()
 
 COLLECTION_NAME = "telemetry"
+
 
 @router.post("/telemetry",
     status_code=status.HTTP_201_CREATED,
@@ -21,24 +25,27 @@ def ingest_telemetry(
         telemetry: TelemetryIn,
         db: Database = Depends(get_db),
 ):
-    doc = telemetry.model_dump()
-    doc["ingested_at"] = datetime.now(timezone.utc)
-
-    collection = db[COLLECTION_NAME]
-    try:
-        result = collection.insert_one(doc)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-    saved = collection.find_one({"_id": result.inserted_id})
-    if saved is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Inserted document not found",
-        )
-    return TelemetryOut.model_validate(saved)
+    # doc = telemetry.model_dump()
+    # doc["ingested_at"] = datetime.now(timezone.utc)
+    #
+    # collection = db[COLLECTION_NAME]
+    # try:
+    #     result = collection.insert_one(doc)
+    # except Exception as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail=str(e),
+    #     )
+    # saved = collection.find_one({"_id": result.inserted_id})
+    # if saved is None:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail="Inserted document not found",
+    #     )
+    # return TelemetryOut.model_validate(saved)
+    repo = TelemetryRepo(db)
+    service = TelemetryService(repo)
+    return service.ingest(telemetry)
 
 @router.get(
     "/telemetry/{telemetry_id}",
