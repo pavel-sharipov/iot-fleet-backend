@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class TelemetryIn(BaseModel):
@@ -34,7 +36,26 @@ class TelemetryIn(BaseModel):
     )
 
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="UTC timestamp when telemetry was generated",
+        ...,
+        description="UTC timestamp when telemetry was generated on device",
         json_schema_extra={"example": "2026-01-21T10:15:30Z"},
     )
+
+class TelemetryOut(TelemetryIn):
+    id: str = Field(alias="_id")
+    ingested_at: datetime
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def object_id_to_str(cls, v: Any) -> str:
+        return str(v)
+
+class TelemetryListOut(BaseModel):
+    items: list[TelemetryOut]
+    limit: int
+    skip: int
+    count: int
