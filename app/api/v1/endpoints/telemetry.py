@@ -12,9 +12,6 @@ from app.services.telemetry_service import TelemetryService
 
 router = APIRouter()
 
-COLLECTION_NAME = "telemetry"
-
-
 @router.post("/telemetry",
     status_code=status.HTTP_201_CREATED,
     tags=["telemetry"],
@@ -25,24 +22,7 @@ def ingest_telemetry(
         telemetry: TelemetryIn,
         db: Database = Depends(get_db),
 ):
-    # doc = telemetry.model_dump()
-    # doc["ingested_at"] = datetime.now(timezone.utc)
-    #
-    # collection = db[COLLECTION_NAME]
-    # try:
-    #     result = collection.insert_one(doc)
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail=str(e),
-    #     )
-    # saved = collection.find_one({"_id": result.inserted_id})
-    # if saved is None:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail="Inserted document not found",
-    #     )
-    # return TelemetryOut.model_validate(saved)
+
     repo = TelemetryRepo(db)
     service = TelemetryService(repo)
     return service.ingest(telemetry)
@@ -58,7 +38,6 @@ def get_telemetry(
     telemetry_id: str,
     db: Database = Depends(get_db),
 ):
-    collection = db[COLLECTION_NAME]
 
     if not ObjectId.is_valid(telemetry_id):
         raise HTTPException(
@@ -67,8 +46,8 @@ def get_telemetry(
         )
 
     obj_id = ObjectId(telemetry_id)
-
-    doc = collection.find_one({"_id": obj_id})
+    repo = TelemetryRepo(db)
+    doc = repo.get_event_by_id(obj_id)
     if doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -84,25 +63,17 @@ def get_telemetry(
     response_model_by_alias=False
 )
 def list_telemetry(
-        limit: int = Query(50, ge=1, le=200),
-        skip: int = Query(0, ge=0),
-        db: Database = Depends(get_db),
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+    db: Database = Depends(get_db),
 ):
-    collection = db[COLLECTION_NAME]
+    repo = TelemetryRepo(db)
     try:
-        cursor = (
-            collection.find({})
-            .sort("_id", -1)
-            .skip(skip)
-            .limit(limit)
-        )
-        docs = list(cursor)
+        docs = repo.list_events(limit=limit, skip=skip)
         items = [TelemetryOut.model_validate(d) for d in docs]
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    return {
-        "items": items,
-        "limit": limit,
-        "skip": skip,
-        "count" : len(items),
-    }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    return TelemetryListOut(items=items, limit=limit, skip=skip, count=len(items))
