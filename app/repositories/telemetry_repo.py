@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, Optional
 
 from bson import ObjectId
+
 from pymongo.database import Database
 
 
@@ -38,11 +39,28 @@ class TelemetryRepo:
     def get_state(self, device_id: str) -> dict | None:
         return self.state.find_one({"_id": device_id})
 
-    def list_states(self, limit: int, skip: int) -> list[dict]:
+    def list_states(
+            self,
+            limit: int,
+            skip: int,
+            query: Optional[dict] = None,
+            sort: Optional[list[tuple[str, int]]] = None,
+    ) -> list[dict]:
+        q = query or {}
+        s = sort or [("ingested_at", -1)]
+
         cursor = (
-            self.state.find({})
-            .sort("ingested_at", -1)
+            self.state.find(q)
+            .sort(s)
             .skip(skip)
             .limit(limit)
         )
         return list(cursor)
+
+    def list_low_battery_states(self, lt: int, limit: int, skip: int) -> list[dict]:
+        return self.list_states(
+            limit=limit,
+            skip=skip,
+            query={"battery": {"$lt": lt}},
+            sort=[("battery", 1), ("ingested_at", -1)],
+        )

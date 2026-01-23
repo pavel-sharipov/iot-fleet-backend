@@ -8,6 +8,57 @@ from app.repositories.telemetry_repo import TelemetryRepo
 
 router = APIRouter()
 
+@router.get(
+    "/state/low-battery",
+    status_code=status.HTTP_200_OK,
+    tags=["state"],
+    response_model=DeviceStateListOut,
+    response_model_by_alias=False,
+)
+def low_battery(
+    lt: int = Query(
+        20,
+        ge=0,
+        le=100,
+        description="Battery threshold (%). Return devices with battery < lt",
+        example=20,
+    ),
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+    db: Database = Depends(get_db),
+):
+    repo = TelemetryRepo(db)
+
+    docs = repo.list_low_battery_states(
+        lt= lt,
+        limit=limit,
+        skip=skip,
+    )
+    items = [DeviceStateOut.model_validate(d) for d in docs]
+
+    return DeviceStateListOut(
+        items=items,
+        limit=limit,
+        skip=skip,
+        count=len(items),
+    )
+
+@router.get(
+    "/state",
+    status_code=status.HTTP_200_OK,
+    tags=["state"],
+    response_model=DeviceStateListOut,
+    response_model_by_alias=False,
+)
+def list_states(
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+    db: Database = Depends(get_db),
+):
+    repo = TelemetryRepo(db)
+    docs = repo.list_states(limit=limit, skip=skip)
+    items = [DeviceStateOut.model_validate(d) for d in docs]
+    return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
 
 @router.get(
     "/state/{device_id}",
@@ -31,20 +82,3 @@ def get_device_state(
 
     return DeviceStateOut.model_validate(doc)
 
-
-@router.get(
-    "/state",
-    status_code=status.HTTP_200_OK,
-    tags=["state"],
-    response_model=DeviceStateListOut,
-    response_model_by_alias=False,
-)
-def list_states(
-    limit: int = Query(50, ge=1, le=200),
-    skip: int = Query(0, ge=0),
-    db: Database = Depends(get_db),
-):
-    repo = TelemetryRepo(db)
-    docs = repo.list_states(limit=limit, skip=skip)
-    items = [DeviceStateOut.model_validate(d) for d in docs]
-    return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
