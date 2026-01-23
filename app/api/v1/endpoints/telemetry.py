@@ -34,25 +34,15 @@ def ingest_telemetry(
     response_model=TelemetryOut,
     response_model_by_alias=False
 )
-def get_telemetry(
-    telemetry_id: str,
-    db: Database = Depends(get_db),
-):
-
+def get_telemetry(telemetry_id: str, db: Database = Depends(get_db)):
     if not ObjectId.is_valid(telemetry_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid telemetry_id",
-        )
+        raise HTTPException(status_code=400, detail="Invalid telemetry_id")
 
-    obj_id = ObjectId(telemetry_id)
     repo = TelemetryRepo(db)
-    doc = repo.get_event_by_id(obj_id)
+    doc = repo.get_event_by_id(ObjectId(telemetry_id))
+
     if doc is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Telemetry not found",
-        )
+        raise HTTPException(status_code=404, detail="Telemetry not found")
 
     return TelemetryOut.model_validate(doc)
 
@@ -68,12 +58,7 @@ def list_telemetry(
     db: Database = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
-    try:
-        docs = repo.list_events(limit=limit, skip=skip)
-        items = [TelemetryOut.model_validate(d) for d in docs]
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
+    docs = repo.list_events(limit=limit, skip=skip)
+    items = [TelemetryOut.model_validate(d) for d in docs]
+
     return TelemetryListOut(items=items, limit=limit, skip=skip, count=len(items))
