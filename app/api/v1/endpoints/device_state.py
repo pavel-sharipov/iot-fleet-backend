@@ -21,7 +21,7 @@ def low_battery(
         ge=0,
         le=100,
         description="Battery threshold (%). Return devices with battery < lt",
-        example=20,
+        examples=[20],
     ),
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
