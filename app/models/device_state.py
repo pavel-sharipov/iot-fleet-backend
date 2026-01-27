@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from app.models.geo import GeoPoint
 
 
 class DeviceStateOut(BaseModel):
@@ -13,6 +15,7 @@ class DeviceStateOut(BaseModel):
     timestamp: datetime
     ingested_at: datetime
     last_event_id: str
+    location: Optional[GeoPoint] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

@@ -18,7 +18,11 @@ def get_mongo_client() -> MongoClient:
 
     return _client
 
+def ensure_indexes(db: Database) -> None:
+    db.devices_state.create_index([("location", "2dsphere")])
 
 def get_db() -> Database:
     db_name = os.getenv("MONGODB_DB", "iot_fleet")
     return get_mongo_client()[db_name]
+
+

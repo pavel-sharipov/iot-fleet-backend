@@ -64,3 +64,27 @@ class TelemetryRepo:
             query={"battery": {"$lt": lt}},
             sort=[("battery", 1), ("ingested_at", -1)],
         )
+
+    def find_states_near (
+        self,
+        lon: float,
+        lat: float,
+        radius_m: int,
+        limit: int,
+        skip: int,
+    ):
+        cursor = (
+            self.state.find(
+                {
+                    "location": {
+                        "$near": {
+                            "$geometry": {"type": "Point", "coordinates": [lon, lat]},
+                            "$maxDistance": radius_m,
+                        }
+                    }
+                }
+            )
+            .skip(skip)
+            .limit(limit)
+        )
+        return list(cursor)

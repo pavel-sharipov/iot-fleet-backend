@@ -23,10 +23,17 @@ class TelemetryService:
             "device_id": telemetry.device_id,
             "lat": telemetry.lat,
             "lon": telemetry.lon,
+            "location": {
+                "type": "Point",
+                "coordinates": [
+                    telemetry.lon,
+                    telemetry.lat,
+                ]
+            },
             "battery": telemetry.battery,
             "timestamp": telemetry.timestamp,
             "ingested_at": doc["ingested_at"],
-            "last_event_id": event_id,
+            "last_event_id": str(event_id),
         }
         self.repo.update_state(telemetry.device_id, state_doc)
 

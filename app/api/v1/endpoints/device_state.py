@@ -5,6 +5,7 @@ from starlette import status
 from app.db.mongo import get_db
 from app.models.device_state import DeviceStateOut, DeviceStateListOut
 from app.repositories.telemetry_repo import TelemetryRepo
+from app.services.device_state_service import DeviceStateService
 
 router = APIRouter()
 
@@ -60,6 +61,20 @@ def list_states(
     items = [DeviceStateOut.model_validate(d) for d in docs]
     return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
 
+
+@router.get("/state/near", response_model=DeviceStateListOut, tags=["state"])
+def state_near(
+        lat: float = Query(..., ge=-90, le=90),
+        lon: float = Query(..., ge=-180, le=180),
+        radius_m: int = Query(500, ge=1, le=200_000),
+        limit: int = Query(50, ge=1, le=200),
+        skip: int = Query(0, ge=0),
+        db: Database = Depends(get_db),
+):
+    repo = TelemetryRepo(db)
+    service = DeviceStateService(repo)
+    return service.near(lat=lat, lon=lon, radius_m=radius_m, limit=limit, skip=skip)
+
 @router.get(
     "/state/{device_id}",
     status_code=status.HTTP_200_OK,
@@ -81,4 +96,6 @@ def get_device_state(
         )
 
     return DeviceStateOut.model_validate(doc)
+
+
 
