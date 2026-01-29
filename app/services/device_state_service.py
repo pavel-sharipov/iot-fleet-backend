@@ -35,3 +35,12 @@ class DeviceStateService:
             skip=skip,
             count=len(items),
         )
+    def list(
+        self,
+        *,
+        limit: int,
+        skip: int,
+    ) -> DeviceStateListOut:
+        docs = self.repo.list_states(limit=limit, skip=skip)
+        items = [DeviceStateOut.model_validate(d) for d in docs]
+        return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))

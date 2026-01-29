@@ -57,9 +57,8 @@ def list_states(
     db: Database = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
-    docs = repo.list_states(limit=limit, skip=skip)
-    items = [DeviceStateOut.model_validate(d) for d in docs]
-    return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
+    service = DeviceStateService(repo)
+    return service.list(limit=limit, skip=skip)
 
 
 @router.get("/state/near", response_model=DeviceStateListOut, tags=["state"])
