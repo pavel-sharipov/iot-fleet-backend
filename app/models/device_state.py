@@ -7,7 +7,7 @@ from app.models.geo import GeoPoint
 
 
 class DeviceStateOut(BaseModel):
-    id: str = Field(alias="_id")
+    id: str = Field(validation_alias="_id")
     device_id: str
     lat: float
     lon: float
@@ -17,7 +17,10 @@ class DeviceStateOut(BaseModel):
     last_event_id: str
     location: Optional[GeoPoint] = None
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
 
     @field_validator("id", mode="before")
     @classmethod

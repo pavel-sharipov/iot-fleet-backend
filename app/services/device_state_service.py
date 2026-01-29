@@ -24,7 +24,7 @@ class DeviceStateService:
 
         items = []
         for d in docs:
-            d["_id"] = str(d["_id"])
+            d["id"] = str(d.pop("_id"))
             if "last_event_id" in d and d["last_event_id"] is not None:
                 d["last_event_id"] = str(d["last_event_id"])
             items.append(DeviceStateOut.model_validate(d))

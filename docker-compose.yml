@@ -2,25 +2,32 @@ services:
   mongo:
     image: mongo:7
     container_name: iot-mongo
-    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    command: ["mongod", "--quiet"]
 
   backend:
-    build: .
+    build:
+      context: .
+      target: base
     container_name: iot-backend
-    restart: unless-stopped
     env_file:
       - .env
-    environment:
-      MONGODB_URI: mongodb://mongo:27017
-      MONGODB_DB: iot_fleet
     ports:
       - "8000:8000"
+    volumes:
+      # Hot-reload dev: your local code is mounted into the container
+      - ./:/app
     depends_on:
       - mongo
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app
 
 volumes:
   mongo_data:
