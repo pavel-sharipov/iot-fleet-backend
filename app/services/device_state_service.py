@@ -44,3 +44,24 @@ class DeviceStateService:
         docs = self.repo.list_states(limit=limit, skip=skip)
         items = [DeviceStateOut.model_validate(d) for d in docs]
         return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
+
+    def low_battery(
+        self,
+        *,
+        lt: int,
+        limit: int,
+        skip: int,
+    ) -> DeviceStateListOut:
+        docs = self.repo.list_low_battery_states(
+            lt=lt,
+            limit=limit,
+            skip=skip,
+        )
+        items = [DeviceStateOut.model_validate(d) for d in docs]
+
+        return DeviceStateListOut(
+            items=items,
+            limit=limit,
+            skip=skip,
+            count=len(items),
+        )

@@ -29,20 +29,8 @@ def low_battery(
     db: Database = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
-
-    docs = repo.list_low_battery_states(
-        lt= lt,
-        limit=limit,
-        skip=skip,
-    )
-    items = [DeviceStateOut.model_validate(d) for d in docs]
-
-    return DeviceStateListOut(
-        items=items,
-        limit=limit,
-        skip=skip,
-        count=len(items),
-    )
+    service = DeviceStateService(repo)
+    return service.low_battery(lt=lt, limit=limit, skip=skip)
 
 @router.get(
     "/state",
