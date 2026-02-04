@@ -8,15 +8,12 @@ class TelemetryService:
     def __init__(self, repo: TelemetryRepo) -> None:
         self.repo = repo
 
-    def ingest(self, telemetry: TelemetryIn) -> TelemetryOut:
-
+    async def ingest(self, telemetry: TelemetryIn) -> TelemetryOut:
         doc = telemetry.model_dump()
         doc["ingested_at"] = datetime.now(timezone.utc)
 
-
-        result = self.repo.insert_event(doc)
+        result = await self.repo.insert_event(doc)
         event_id = result.inserted_id
-
 
         state_doc = {
             "_id": telemetry.device_id,
@@ -25,18 +22,15 @@ class TelemetryService:
             "lon": telemetry.lon,
             "location": {
                 "type": "Point",
-                "coordinates": [
-                    telemetry.lon,
-                    telemetry.lat,
-                ]
+                "coordinates": [telemetry.lon, telemetry.lat],
             },
             "battery": telemetry.battery,
             "timestamp": telemetry.timestamp,
             "ingested_at": doc["ingested_at"],
-            "last_event_id": str(event_id),
+            "last_event_id": str(event_id),  # оставляем строкой
         }
-        self.repo.update_state(telemetry.device_id, state_doc)
 
+        await self.repo.update_state(telemetry.device_id, state_doc)
 
         return TelemetryOut.model_validate(
             {

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pymongo.database import Database
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from starlette import status
 
 from app.db.mongo import get_db
@@ -9,6 +9,7 @@ from app.services.device_state_service import DeviceStateService
 
 router = APIRouter()
 
+
 @router.get(
     "/state/low-battery",
     status_code=status.HTTP_200_OK,
@@ -16,7 +17,7 @@ router = APIRouter()
     response_model=DeviceStateListOut,
     response_model_by_alias=False,
 )
-def low_battery(
+async def low_battery(
     lt: int = Query(
         20,
         ge=0,
@@ -26,11 +27,12 @@ def low_battery(
     ),
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
-    db: Database = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
     service = DeviceStateService(repo)
-    return service.low_battery(lt=lt, limit=limit, skip=skip)
+    return await service.low_battery(lt=lt, limit=limit, skip=skip)
+
 
 @router.get(
     "/state",
@@ -39,28 +41,33 @@ def low_battery(
     response_model=DeviceStateListOut,
     response_model_by_alias=False,
 )
-def list_states(
+async def list_states(
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
-    db: Database = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
     service = DeviceStateService(repo)
-    return service.list(limit=limit, skip=skip)
+    return await service.list(limit=limit, skip=skip)
 
 
-@router.get("/state/near", response_model=DeviceStateListOut, tags=["state"])
-def state_near(
-        lat: float = Query(..., ge=-90, le=90),
-        lon: float = Query(..., ge=-180, le=180),
-        radius_m: int = Query(500, ge=1, le=200_000),
-        limit: int = Query(50, ge=1, le=200),
-        skip: int = Query(0, ge=0),
-        db: Database = Depends(get_db),
+@router.get(
+    "/state/near",
+    response_model=DeviceStateListOut,
+    tags=["state"],
+)
+async def state_near(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    radius_m: int = Query(500, ge=1, le=200_000),
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
     service = DeviceStateService(repo)
-    return service.near(lat=lat, lon=lon, radius_m=radius_m, limit=limit, skip=skip)
+    return await service.near(lat=lat, lon=lon, radius_m=radius_m, limit=limit, skip=skip)
+
 
 @router.get(
     "/state/{device_id}",
@@ -69,12 +76,12 @@ def state_near(
     response_model=DeviceStateOut,
     response_model_by_alias=False,
 )
-def get_device_state(
+async def get_device_state(
     device_id: str,
-    db: Database = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
-    doc = repo.get_state(device_id)
+    doc = await repo.get_state(device_id)
 
     if doc is None:
         raise HTTPException(
@@ -83,6 +90,3 @@ def get_device_state(
         )
 
     return DeviceStateOut.model_validate(doc)
-
-
-
