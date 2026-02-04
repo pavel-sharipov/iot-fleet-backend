@@ -13,7 +13,6 @@ def test_state_near_finds_device(client):
         "lat": 48.137154,
         "lon": 11.576124,
         "battery": 80,
-        "status": "ok",
     }
     r = client.post("/api/v1/telemetry", json=payload)
     assert r.status_code in (200, 201), r.text
