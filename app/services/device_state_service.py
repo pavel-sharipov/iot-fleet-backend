@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.models.device_state import DeviceStateListOut, DeviceStateOut
 from app.repositories.telemetry_repo import TelemetryRepo
 
@@ -6,7 +8,14 @@ class DeviceStateService:
     def __init__(self, repo: TelemetryRepo) -> None:
         self.repo = repo
 
-    def near(
+    @staticmethod
+    def _normalize_doc(d: dict) -> dict:
+        d["id"] = str(d.pop("_id"))
+        if "last_event_id" in d and d["last_event_id"] is not None:
+            d["last_event_id"] = str(d["last_event_id"])
+        return d
+
+    async def near(
         self,
         lat: float,
         lon: float,
@@ -14,7 +23,7 @@ class DeviceStateService:
         limit: int,
         skip: int,
     ) -> DeviceStateListOut:
-        docs = self.repo.find_states_near(
+        docs = await self.repo.find_states_near(
             lon=lon,
             lat=lat,
             radius_m=radius_m,
@@ -22,46 +31,26 @@ class DeviceStateService:
             skip=skip,
         )
 
-        items = []
-        for d in docs:
-            d["id"] = str(d.pop("_id"))
-            if "last_event_id" in d and d["last_event_id"] is not None:
-                d["last_event_id"] = str(d["last_event_id"])
-            items.append(DeviceStateOut.model_validate(d))
+        items = [DeviceStateOut.model_validate(self._normalize_doc(d)) for d in docs]
+        return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
 
-        return DeviceStateListOut(
-            items=items,
-            limit=limit,
-            skip=skip,
-            count=len(items),
-        )
-    def list(
+    async def list(
         self,
         *,
         limit: int,
         skip: int,
     ) -> DeviceStateListOut:
-        docs = self.repo.list_states(limit=limit, skip=skip)
-        items = [DeviceStateOut.model_validate(d) for d in docs]
+        docs = await self.repo.list_states(limit=limit, skip=skip)
+        items = [DeviceStateOut.model_validate(self._normalize_doc(d)) for d in docs]
         return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))
 
-    def low_battery(
+    async def low_battery(
         self,
         *,
         lt: int,
         limit: int,
         skip: int,
     ) -> DeviceStateListOut:
-        docs = self.repo.list_low_battery_states(
-            lt=lt,
-            limit=limit,
-            skip=skip,
-        )
-        items = [DeviceStateOut.model_validate(d) for d in docs]
-
-        return DeviceStateListOut(
-            items=items,
-            limit=limit,
-            skip=skip,
-            count=len(items),
-        )
+        docs = await self.repo.list_low_battery_states(lt=lt, limit=limit, skip=skip)
+        items = [DeviceStateOut.model_validate(self._normalize_doc(d)) for d in docs]
+        return DeviceStateListOut(items=items, limit=limit, skip=skip, count=len(items))

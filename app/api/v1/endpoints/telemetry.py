@@ -1,64 +1,68 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pymongo.database import Database
 from starlette import status
 from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from app.db.mongo import get_db
 from app.models.telemetry import TelemetryIn, TelemetryOut, TelemetryListOut
-
 from app.repositories.telemetry_repo import TelemetryRepo
 from app.services.telemetry_service import TelemetryService
 
 router = APIRouter()
 
-@router.post("/telemetry",
+
+@router.post(
+    "/telemetry",
     status_code=status.HTTP_201_CREATED,
     tags=["telemetry"],
     response_model=TelemetryOut,
-    response_model_by_alias=False
+    response_model_by_alias=False,
 )
-def ingest_telemetry(
-        telemetry: TelemetryIn,
-        db: Database = Depends(get_db),
+async def ingest_telemetry(
+    telemetry: TelemetryIn,
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-
     repo = TelemetryRepo(db)
     service = TelemetryService(repo)
-    return service.ingest(telemetry)
+    return await service.ingest(telemetry)
+
 
 @router.get(
     "/telemetry/{telemetry_id}",
     status_code=status.HTTP_200_OK,
     tags=["telemetry"],
     response_model=TelemetryOut,
-    response_model_by_alias=False
+    response_model_by_alias=False,
 )
-def get_telemetry(telemetry_id: str, db: Database = Depends(get_db)):
+async def get_telemetry(
+    telemetry_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
     if not ObjectId.is_valid(telemetry_id):
         raise HTTPException(status_code=400, detail="Invalid telemetry_id")
 
     repo = TelemetryRepo(db)
-    doc = repo.get_event_by_id(ObjectId(telemetry_id))
+    doc = await repo.get_event_by_id(ObjectId(telemetry_id))
 
     if doc is None:
         raise HTTPException(status_code=404, detail="Telemetry not found")
 
     return TelemetryOut.model_validate(doc)
 
-@router.get("/telemetry",
+
+@router.get(
+    "/telemetry",
     status_code=status.HTTP_200_OK,
     tags=["telemetry"],
     response_model=TelemetryListOut,
-    response_model_by_alias=False
+    response_model_by_alias=False,
 )
-def list_telemetry(
+async def list_telemetry(
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
-    db: Database = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     repo = TelemetryRepo(db)
-    docs = repo.list_events(limit=limit, skip=skip)
+    docs = await repo.list_events(limit=limit, skip=skip)
     items = [TelemetryOut.model_validate(d) for d in docs]
-
     return TelemetryListOut(items=items, limit=limit, skip=skip, count=len(items))
